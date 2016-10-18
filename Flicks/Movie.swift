@@ -11,11 +11,15 @@ import Foundation
 class Movie {
     let dateInput = DateFormatter()
     let basePath = "https://image.tmdb.org/t/p/w500/"
+    let lowResBase = "https://image.tmdb.org/t/p/w45"
+    let hiResBase = "https://image.tmdb.org/t/p/original"
     var title: String
     var overview: String
     var popularityRating: Double
     var releaseDate: String = "Unknown"
     var poster: URL?
+    var lowResPoster: URL?
+    var hiResPoster: URL?
     
     init(movie: NSDictionary) {
         self.dateInput.dateFormat = "yyyy-MM-dd"
@@ -28,6 +32,8 @@ class Movie {
         }
         if let path = movie["poster_path"] as? String {
             self.poster = URL(string:  basePath + path)
+            self.lowResPoster = URL(string: lowResBase + path)
+            self.hiResPoster = URL(string: hiResBase + path)
         }
     }
 }

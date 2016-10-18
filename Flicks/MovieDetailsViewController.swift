@@ -24,21 +24,46 @@ class MovieDetailsViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        if let poster = movie?.poster {
-            self.posterImage.setImageWith(poster)
+        if let poster = movie?.lowResPoster {
+            let loResRequest = URLRequest(url: poster)
+            
+            self.posterImage.setImageWith(
+                loResRequest,
+                placeholderImage: nil,
+                success: { (smallImageRequest, smallImageResponse, smallImage) -> Void in
+                    
+                    // smallImageResponse will be nil if the smallImage is already available
+                    // in cache (might want to do something smarter in that case).
+                    self.posterImage.alpha = 0.0
+                    self.posterImage.image = smallImage;
+                    
+                    UIView.animate(withDuration: 0.3, animations: { () -> Void in
+                        
+                        self.posterImage.alpha = 1.0
+                        
+                        }, completion: { (sucess) -> Void in
+                            
+                            if let hiResUrl = self.movie?.hiResPoster {
+                                let hiResRequest = URLRequest(url: hiResUrl)
+                                self.posterImage.setImageWith(
+                                    hiResRequest,
+                                    placeholderImage: smallImage,
+                                    success: { (largeImageRequest, largeImageResponse, largeImage) -> Void in
+                                        
+                                        self.posterImage.image = largeImage;
+                                        
+                                    },
+                                    failure: { (request, response, error) -> Void in
+                                        
+                                })
+                            }
+                    })
+                },
+                failure: { (request, response, error) -> Void in
+            })
         }
         
         self.addDetailsToScrollView()
-        
-        let contentWidth = detailView.bounds.width
-        let contentHeight = movieTitle.bounds.height +
-            releaseDate.bounds.height +
-            popularityRating.bounds.height +
-            overview.bounds.height +
-            50
-        print("details height=\(contentHeight)")
-        detailView.frame.size = CGSize(width: contentWidth, height: contentHeight)
-        scrollView.contentSize = CGSize(width: contentWidth, height: contentHeight + 500)
     }
 
     override func didReceiveMemoryWarning() {
@@ -55,6 +80,16 @@ class MovieDetailsViewController: UIViewController {
             self.overview.text = movie.overview
             self.overview.sizeToFit()
         }
+        
+        let contentWidth = detailView.bounds.width
+        let contentHeight = movieTitle.bounds.height +
+            releaseDate.bounds.height +
+            popularityRating.bounds.height +
+            overview.bounds.height +
+            50
+        print("details height=\(contentHeight)")
+        detailView.frame.size = CGSize(width: contentWidth, height: contentHeight)
+        scrollView.contentSize = CGSize(width: contentWidth, height: contentHeight + 500)
     }
 
     /*

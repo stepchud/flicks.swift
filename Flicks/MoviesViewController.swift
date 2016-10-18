@@ -29,6 +29,7 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
         searchBarTop.delegate = self
         
         self.navigationItem.titleView = self.searchBarTop
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: "Movies", style: .plain, target: nil, action: nil)
         
         // network error hidden initially
         networkErrorLabel.isHidden = true
@@ -51,20 +52,39 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
         return filteredMovies.count
     }
     
-    
-    // Row display. Implementers should *always* try to reuse cells by setting each cell's reuseIdentifier and querying for available reusable cells with dequeueReusableCellWithIdentifier:
-    // Cell gets various attributes set automatically based on table (separators) and data source (accessory views, editing controls)
-    
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
         let cell = tableView.dequeueReusableCell(withIdentifier: "MovieCell", for: indexPath) as! MovieCell
+        cell.selectionStyle = .none
+        
         let movie = filteredMovies[indexPath.row]
         cell.titleLabel.text = movie.title
         cell.overviewLabel.text = movie.overview
         cell.overviewLabel.sizeToFit()
         
         if let url = movie.poster {
-            cell.posterView.setImageWith(url)
+            let imageRequest = URLRequest(url: url)
+            cell.posterView.setImageWith(
+                imageRequest,
+                placeholderImage: nil,
+                success: { (imageRequest, imageResponse, image) -> Void in
+                    
+                    // imageResponse will be nil if the image is cached
+                    if imageResponse != nil {
+                        print("Image was NOT cached, fade in image")
+                        cell.posterView.alpha = 0.0
+                        cell.posterView.image = image
+                        UIView.animate(withDuration: 0.3, animations: { () -> Void in
+                            cell.posterView.alpha = 1.0
+                        })
+                    } else {
+                        print("Image was cached so just update the image")
+                        cell.posterView.image = image
+                    }
+                },
+                failure: { (imageRequest, imageResponse, error) -> Void in
+                    // do something for the failure condition
+            })
         }
 
         return cell
@@ -97,6 +117,7 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
         let task : URLSessionDataTask = session.dataTask(with: request,completionHandler: { (dataOrNil, response, error) in
             if error != nil {
                 self.networkErrorLabel.isHidden = false
+                refreshControl?.endRefreshing()
                 return
             } else {
                 self.networkErrorLabel.isHidden = true
@@ -112,9 +133,7 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
                     }
                     self.filteredMovies = self.movies
                     self.tableView.reloadData()
-                    if let rc = refreshControl {
-                        rc.endRefreshing()
-                    }
+                    refreshControl?.endRefreshing()
                 }
             }
         });
@@ -124,6 +143,7 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         let details = segue.destination as! MovieDetailsViewController
         if let indexPath = tableView.indexPath(for: sender as! UITableViewCell) {
+            searchBarTop.endEditing(true)
             details.movie = self.filteredMovies[indexPath.row]
         }
     }
